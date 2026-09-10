@@ -1,0 +1,104 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  username  String?
+  name      String?
+  posts     Post[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Post {
+  id        Int      @id @default(autoincrement())
+  title     String
+  content   String?
+  author    User     @relation(fields: [authorId], references: [id])
+  authorId  Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Magazyn materiałów
+model Material {
+  id        Int              @id @default(autoincrement())
+  name      String
+  stockArea Float
+  parts     PartDefinition[]
+}
+
+// Definicja mebla (np. Szafka)
+model Product {
+  id     Int               @id @default(autoincrement())
+  name   String
+  parts  PartDefinition[]
+  orders ProductionOrder[]
+}
+
+// Składowe elementy mebla (np. Bok lewy)
+model PartDefinition {
+  id         Int              @id @default(autoincrement())
+  name       String
+  length     Float
+  width      Float
+  productId  Int
+  product    Product          @relation(fields: [productId], references: [id])
+  materialId Int
+  material   Material         @relation(fields: [materialId], references: [id])
+  tasks      ProductionTask[]
+}
+
+// Maszyny na hali (np. do wiercenia)
+model Machine {
+  id    Int              @id @default(autoincrement())
+  name  String
+  type  String
+  tasks ProductionTask[]
+}
+
+// Zlecenie wyprodukowania
+model ProductionOrder {
+  id        Int              @id @default(autoincrement())
+  productId Int
+  product   Product          @relation(fields: [productId], references: [id])
+  quantity  Int
+  status    OrderStatus      @default(PENDING)
+  tasks     ProductionTask[]
+}
+
+// Konkretny element z naklejką (kodem kreskowym)
+model ProductionTask {
+  id             Int             @id @default(autoincrement())
+  orderId        Int
+  order          ProductionOrder @relation(fields: [orderId], references: [id])
+  partDefId      Int
+  partDefinition PartDefinition  @relation(fields: [partDefId], references: [id])
+  machineId      Int?
+  machine        Machine?        @relation(fields: [machineId], references: [id])
+  status         TaskStatus      @default(PENDING)
+  barcode        String          @unique
+}
+
+enum OrderStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum TaskStatus {
+  PENDING
+  CUT
+  DRILLED
+  COMPLETED
+}
