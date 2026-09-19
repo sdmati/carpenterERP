@@ -1,9 +1,8 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty } from '@nestjs/swagger';
 import {
   IsInt,
   IsNotEmpty,
   IsNumber,
-  IsOptional,
   IsPositive,
   IsString,
 } from 'class-validator';
@@ -41,13 +40,14 @@ export class CreatePartDto {
   @IsPositive()
   width: number;
 
-  @ApiPropertyOptional({
+  @ApiProperty({
     description: 'Grubość elementu w milimetrach',
     example: 18.0,
   })
   @IsNumber()
   @IsPositive()
-  thickness?: number;
+  @IsNotEmpty()
+  thickness: number;
 
   @ApiProperty({
     description: 'Identyfikator mebla (produktu), do którego przypisany jest element',

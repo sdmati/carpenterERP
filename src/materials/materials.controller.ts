@@ -1,8 +1,19 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  ParseIntPipe,
+} from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
 import { MaterialsService } from './materials.service.js';
 import { CreateMaterialDto } from './dto/create-material.dto.js';
 import { UpdateMaterialDto } from './dto/update-material.dto.js';
 
+@ApiTags('materials')
 @Controller('materials')
 export class MaterialsController {
   constructor(private readonly materialsService: MaterialsService) {}
@@ -18,17 +29,20 @@ export class MaterialsController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.materialsService.findOne(+id);
+  findOne(@Param('id', ParseIntPipe) id: number) {
+    return this.materialsService.findOne(id);
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateMaterialDto: UpdateMaterialDto) {
-    return this.materialsService.update(+id, updateMaterialDto);
+  update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updateMaterialDto: UpdateMaterialDto,
+  ) {
+    return this.materialsService.update(id, updateMaterialDto);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.materialsService.remove(+id);
+  remove(@Param('id', ParseIntPipe) id: number) {
+    return this.materialsService.remove(id);
   }
 }

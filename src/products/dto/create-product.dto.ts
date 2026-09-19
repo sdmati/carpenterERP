@@ -1,5 +1,5 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { ApiProperty } from '@nestjs/swagger';
+import { IsNotEmpty, IsString } from 'class-validator';
 
 export class CreateProductDto {
   @ApiProperty({
@@ -9,12 +9,4 @@ export class CreateProductDto {
   @IsString()
   @IsNotEmpty()
   name: string;
-
-  @ApiPropertyOptional({
-    description: 'Kolorystyka lub wykończenie mebla',
-    example: 'Dąb Artisan / Czarny mat',
-  })
-  @IsOptional()
-  @IsString()
-  color?: string;
 }

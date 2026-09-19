@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsEnum, IsInt, IsOptional, IsPositive } from 'class-validator';
-import { OrderStatus } from '@prisma/client';
+import { OrderStatus, Color } from '@prisma/client';
 
 export class CreateOrderDto {
   @ApiProperty({
@@ -18,6 +18,14 @@ export class CreateOrderDto {
   @IsInt()
   @IsPositive()
   productId: number;
+
+  @ApiProperty({
+    description: 'Kolor zamawianej partii mebli',
+    enum: Color,
+    example: Color.SONOMA,
+  })
+  @IsEnum(Color)
+  color: Color;
 
   @ApiPropertyOptional({
     description: 'Status realizacji zlecenia produkcyjnego',

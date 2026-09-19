@@ -1,4 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
 import { CreateOrderDto } from './dto/create-order.dto.js';
 import { UpdateOrderDto } from './dto/update-order.dto.js';
 import { PrismaService } from '../prisma/prisma.service.js';
@@ -7,9 +11,45 @@ import { PrismaService } from '../prisma/prisma.service.js';
 export class OrdersService {
   constructor(private prisma: PrismaService) {}
 
-  create(createOrderDto: CreateOrderDto) {
+  async create(createOrderDto: CreateOrderDto) {
+    const { productId, quantity, color } = createOrderDto;
+
+    // 1. Pobieramy definicję mebla i jego składowe
+    const product = await this.prisma.product.findUnique({
+      where: { id: productId },
+      include: { parts: true },
+    });
+
+    if (!product) {
+      throw new NotFoundException('Nie znaleziono takiego mebla.');
+    }
+    if (product.parts.length === 0) {
+      throw new BadRequestException(
+        'Mebel nie ma przypisanych żadnych formatek w technologii.',
+      );
+    }
+
+    // 2. Tworzymy zamówienie i od razu generujemy pule zadań na halę
     return this.prisma.productionOrder.create({
-      data: createOrderDto,
+      data: {
+        productId,
+        quantity,
+        color,
+        tasks: {
+          create: product.parts.map((part) => ({
+            partDefId: part.id,
+            quantity: part.quantity * quantity, // np. 2 boki * 50 szaf = partia 100 sztuk
+            barcode: `ORD-${Date.now().toString().slice(-4)}-PART-${part.id}`, // unikalny kod na wózek
+          })),
+        },
+      },
+      include: {
+        tasks: {
+          include: {
+            partDefinition: true,
+          },
+        },
+      },
     });
   }
 
@@ -17,7 +57,11 @@ export class OrdersService {
     return this.prisma.productionOrder.findMany({
       include: {
         product: true,
-        tasks: true,
+        tasks: {
+          include: {
+            partDefinition: true,
+          },
+        },
       },
     });
   }
@@ -27,7 +71,11 @@ export class OrdersService {
       where: { id },
       include: {
         product: true,
-        tasks: true,
+        tasks: {
+          include: {
+            partDefinition: true,
+          },
+        },
       },
     });
   }

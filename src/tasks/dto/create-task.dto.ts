@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsEnum, IsInt, IsOptional, IsPositive } from 'class-validator';
+import { IsEnum, IsInt, IsOptional, IsPositive, IsString } from 'class-validator';
 import { TaskStatus } from '@prisma/client';
 
 export class CreateTaskDto {
@@ -45,4 +45,12 @@ export class CreateTaskDto {
   @IsInt()
   @IsPositive()
   machineId?: number;
+
+  @ApiPropertyOptional({
+    description: 'Unikalny kod kreskowy partii produkcyjnej (np. na wózek lub paletę)',
+    example: 'ORD-1234-PART-4',
+  })
+  @IsOptional()
+  @IsString()
+  barcode?: string;
 }

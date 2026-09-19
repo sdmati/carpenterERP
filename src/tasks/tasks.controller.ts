@@ -1,16 +1,30 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Patch,
+  Param,
+  Body,
+  ParseIntPipe,
+} from '@nestjs/common';
 import { TasksService } from './tasks.service.js';
-import { CreateTaskDto } from './dto/create-task.dto.js';
-import { UpdateTaskDto } from './dto/update-task.dto.js';
+import { ApiTags, ApiOperation, ApiProperty } from '@nestjs/swagger';
+import { TaskStatus } from '@prisma/client';
+import { IsEnum } from 'class-validator';
 
+class UpdateTaskStatusDto {
+  @ApiProperty({
+    enum: TaskStatus,
+    description: 'Nowy status partii',
+    example: TaskStatus.DRILLED,
+  })
+  @IsEnum(TaskStatus)
+  status: TaskStatus;
+}
+
+@ApiTags('tasks')
 @Controller('tasks')
 export class TasksController {
   constructor(private readonly tasksService: TasksService) {}
-
-  @Post()
-  create(@Body() createTaskDto: CreateTaskDto) {
-    return this.tasksService.create(createTaskDto);
-  }
 
   @Get()
   findAll() {
@@ -18,17 +32,16 @@ export class TasksController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.tasksService.findOne(+id);
+  findOne(@Param('id', ParseIntPipe) id: number) {
+    return this.tasksService.findOne(id);
   }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateTaskDto: UpdateTaskDto) {
-    return this.tasksService.update(+id, updateTaskDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.tasksService.remove(+id);
+  @Patch(':id/status')
+  @ApiOperation({ summary: 'Zmiana statusu partii przez pracownika hali' })
+  updateStatus(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateTaskStatusDto,
+  ) {
+    return this.tasksService.updateStatus(id, dto.status);
   }
 }
