@@ -23,7 +23,38 @@
 
 ## Description
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+**Stolarz ERP** to system zarządzania produkcją mebli, stanami magazynowymi płyt i zleceniami produkcyjnymi na hali produkcyjnej.
+
+### Role użytkowników i uprawnienia do oznaczania etapów produkcji:
+- **`SAW_OPERATOR` (Operator piły / rozkroju)**:
+  - Może oznaczać formatki/partie jako **`CUT`** (po rozkroju).
+  - Nie ma uprawnień do oznaczania `DRILLED` ani `COMPLETED`.
+- **`DRILL_OPERATOR` (Operator wiertarki CNC)**:
+  - Może oznaczać wycięte formatki (`CUT`) jako **`DRILLED`** (po nawierceniu).
+  - Nie może wiercić niewyciętych formatek ani oznaczać jako `CUT` / `COMPLETED`.
+- **`PACKER` (Pakowacz)**:
+  - Może oznaczyć **całe zlecenie produkcyjne** jako **`PACKED`** (poprzez `PATCH /orders/:id/status`), pod warunkiem że **wszystkie części w zleceniu zostały nawiercone (`DRILLED`)**. Po spakowaniu zlecenia zadania automatycznie uzyskują status `COMPLETED`.
+  - Może również oznaczać poszczególne formatki jako `COMPLETED`.
+- **`ADMIN` (Kierownik produkcji / Administrator)**:
+  - Posiada pełne uprawnienia do wszystkich statusów zadań i zleceń (`PENDING`, `IN_PROGRESS`, `PACKED`, `COMPLETED`), zarządzania pracownikami, produktami, materiałami i zleceniami.
+
+### Domyślne konta testowe (seed):
+| Login | Hasło | Rola |
+| :--- | :--- | :--- |
+| `admin` | `admin123` | `ADMIN` |
+| `saw_operator` | `saw123` | `SAW_OPERATOR` |
+| `drill_operator` | `drill123` | `DRILL_OPERATOR` |
+| `packer` | `packer123` | `PACKER` |
+
+### Kluczowe endpointy API:
+- `POST /auth/login` – logowanie pracownika i pobranie tokenu JWT
+- `GET /auth/me` – dane zalogowanego pracownika
+- `GET /orders/:id/tasks` lub `GET /tasks/order/:orderId` – pobranie listy elementów potrzebnych do konkretnego zamówienia
+- `GET /tasks/barcode/:barcode` – szybkie odszukanie zadania po kodzie kreskowym na wózku/palecie
+- `PATCH /tasks/:id/status` – aktualizacja statusu formatki przez zalogowanego pracownika (`CUT`, `DRILLED`, `COMPLETED`)
+- `PATCH /orders/:id/status` – zmiana statusu całego zlecenia na `PACKED` przez `PACKER` (gdy wszystkie części są `DRILLED`)
+- `GET /api` – interaktywna dokumentacja Swagger UI z autoryzacją Bearer JWT
+
 
 ## Project setup
 

@@ -8,12 +8,13 @@ async function bootstrap() {
     instrument: ObserveInstrument,
   });
 
-  app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
+  app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
 
   const config = new DocumentBuilder()
     .setTitle('Stolarz ERP API')
-    .setDescription('System do zarządzania produkcją mebli i materiałami')
+    .setDescription('System do zarządzania produkcją mebli, materiałami oraz rolami pracowników na hali')
     .setVersion('1.0')
+    .addBearerAuth()
     .build();
 
   const document = SwaggerModule.createDocument(app, config);

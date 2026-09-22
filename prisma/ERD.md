@@ -4,6 +4,7 @@ erDiagram
         OrderStatus {
             PENDING PENDING
 IN_PROGRESS IN_PROGRESS
+PACKED PACKED
 COMPLETED COMPLETED
         }
     
@@ -32,6 +33,13 @@ BLACK BLACK
 DRILL_OPERATOR DRILL_OPERATOR
 PACKER PACKER
 ADMIN ADMIN
+        }
+    
+
+
+        MachineType {
+            DRILL DRILL
+SAW SAW
         }
     
   "Material" {
@@ -65,7 +73,7 @@ ADMIN ADMIN
   "Machine" {
     Int id "🗝️"
     String name 
-    String type 
+    MachineType type 
     }
   
 
@@ -97,6 +105,7 @@ ADMIN ADMIN
     "Material" |o--|| "Color" : "enum:color"
     "PartDefinition" }o--|| "Product" : "product"
     "PartDefinition" }o--|| "Material" : "material"
+    "Machine" |o--|| "MachineType" : "enum:type"
     "ProductionOrder" |o--|| "Color" : "enum:color"
     "ProductionOrder" |o--|| "OrderStatus" : "enum:status"
     "ProductionOrder" }o--|| "Product" : "product"

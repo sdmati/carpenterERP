@@ -8,6 +8,8 @@ import { ProductsModule } from './products/products.module.js';
 import { PartsModule } from './parts/parts.module.js';
 import { OrdersModule } from './orders/orders.module.js';
 import { TasksModule } from './tasks/tasks.module.js';
+import { UsersModule } from './users/users.module.js';
+import { AuthModule } from './auth/auth.module.js';
 
 export const { ObserveModule, ObserveInstrument } = createObserveModule();
 
@@ -21,6 +23,8 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule();
       appSecret: 'YOUR_APP_SECRET',
       serviceId: 'stolarz-erp',
     }),
+    AuthModule,
+    UsersModule,
     MaterialsModule,
     ProductsModule,
     PartsModule,

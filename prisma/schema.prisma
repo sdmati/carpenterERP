@@ -88,6 +88,7 @@ model ProductionTask {
 enum OrderStatus {
   PENDING
   IN_PROGRESS
+  PACKED
   COMPLETED
 }
 
