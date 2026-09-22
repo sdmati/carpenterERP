@@ -10,6 +10,7 @@ import { UpdateOrderDto } from './dto/update-order.dto.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { OrderStatus, TaskStatus, Role } from '@prisma/client';
 import { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface.js';
+import { groupTasksIntoCuttingList } from '../tasks/utils/cutting-list.util.js';
 
 @Injectable()
 export class OrdersService {
@@ -170,6 +171,29 @@ export class OrdersService {
         },
       },
     });
+  }
+
+  async getCuttingList(id: number) {
+    const order = await this.prisma.productionOrder.findUnique({
+      where: { id },
+    });
+
+    if (!order) {
+      throw new NotFoundException(`Nie znaleziono zlecenia o ID ${id}`);
+    }
+
+    const tasks = await this.prisma.productionTask.findMany({
+      where: { orderId: id },
+      include: {
+        partDefinition: {
+          include: {
+            material: true,
+          },
+        },
+      },
+    });
+
+    return groupTasksIntoCuttingList(tasks);
   }
 
   update(id: number, updateOrderDto: UpdateOrderDto) {

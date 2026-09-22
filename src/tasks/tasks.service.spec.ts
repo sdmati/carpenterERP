@@ -356,4 +356,103 @@ describe('TasksService', () => {
       );
     });
   });
+
+  describe('getCuttingList i cutDimensionGroup', () => {
+    it('getCuttingList zwraca pogrupowaną listę rozkroju', async () => {
+      const mockTasks = [
+        {
+          id: 1,
+          quantity: 3,
+          status: TaskStatus.PENDING,
+          barcode: 'B1',
+          partDefinition: {
+            id: 10,
+            name: 'Bok lewy',
+            length: 720,
+            width: 510,
+            thickness: 18,
+            material: { id: 1, name: 'Sonoma', color: 'SONOMA', thickness: 18 },
+          },
+        },
+        {
+          id: 2,
+          quantity: 3,
+          status: TaskStatus.PENDING,
+          barcode: 'B2',
+          partDefinition: {
+            id: 11,
+            name: 'Bok prawy',
+            length: 720,
+            width: 510,
+            thickness: 18,
+            material: { id: 1, name: 'Sonoma', color: 'SONOMA', thickness: 18 },
+          },
+        },
+      ];
+      prisma.productionTask.findMany.mockResolvedValue(mockTasks);
+
+      const list = await service.getCuttingList(1);
+      expect(list).toHaveLength(1);
+      expect(list[0].dimensions.formatted).toBe('720 x 510 x 18 mm');
+      expect(list[0].totalQuantity).toBe(6);
+      expect(list[0].parts).toHaveLength(2);
+    });
+
+    it('cutDimensionGroup oznacza wszystkie pasujące formatki w zleceniu jako CUT dla SAW_OPERATOR', async () => {
+      const mockPendingTasks = [
+        {
+          id: 1,
+          quantity: 5,
+          status: TaskStatus.PENDING,
+          orderId: 10,
+          partDefinition: { id: 10, length: 720, width: 510, materialId: 1 },
+        },
+        {
+          id: 2,
+          quantity: 5,
+          status: TaskStatus.PENDING,
+          orderId: 10,
+          partDefinition: { id: 11, length: 720, width: 510, materialId: 1 },
+        },
+      ];
+
+      prisma.productionTask.findMany.mockResolvedValue(mockPendingTasks);
+
+      prisma.productionTask.findUnique
+        .mockResolvedValueOnce({ id: 1, status: TaskStatus.PENDING, orderId: 10 })
+        .mockResolvedValueOnce({ id: 2, status: TaskStatus.PENDING, orderId: 10 });
+
+      prisma.productionTask.update
+        .mockResolvedValueOnce({ id: 1, status: TaskStatus.CUT })
+        .mockResolvedValueOnce({ id: 2, status: TaskStatus.CUT });
+
+      const res = await service.cutDimensionGroup(
+        { orderId: 10, length: 720, width: 510, materialId: 1 },
+        sawOperator,
+      );
+
+      expect(res.updatedCount).toBe(2);
+      expect(res.totalCutQuantity).toBe(10);
+    });
+
+    it('cutDimensionGroup rzuca ForbiddenException dla DRILL_OPERATOR', async () => {
+      await expect(
+        service.cutDimensionGroup(
+          { orderId: 10, length: 720, width: 510 },
+          drillOperator,
+        ),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('cutDimensionGroup rzuca NotFoundException gdy brak formatek o tych wymiarach', async () => {
+      prisma.productionTask.findMany.mockResolvedValue([]);
+
+      await expect(
+        service.cutDimensionGroup(
+          { orderId: 10, length: 999, width: 999 },
+          sawOperator,
+        ),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
 });

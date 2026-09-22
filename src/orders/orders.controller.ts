@@ -47,6 +47,16 @@ export class OrdersController {
     return this.ordersService.getTasks(id);
   }
 
+  @Get(':id/cutting-list')
+  @ApiOperation({
+    summary: 'Pobierz listę rozkroju dla konkretnego zlecenia (formatki pogrupowane po wymiarach dla pilarza)',
+    description:
+      'Zwraca listę formatek potrzebnych do wykonania zlecenia pogrupowaną po wymiarach (długość x szerokość x grubość) i materiale, sumując ilości do wycięcia.',
+  })
+  getCuttingList(@Param('id', ParseIntPipe) id: number) {
+    return this.ordersService.getCuttingList(id);
+  }
+
   @UseGuards(JwtAuthGuard)
   @Patch(':id/status')
   @ApiBearerAuth()

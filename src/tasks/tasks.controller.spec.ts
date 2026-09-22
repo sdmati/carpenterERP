@@ -76,4 +76,21 @@ describe('TasksController', () => {
     expect(result).toEqual([{ id: 1 }]);
     expect(tasksService.findAll).toHaveBeenCalledWith(12, TaskStatus.CUT);
   });
+
+  it('getCuttingList wywołuje tasksService.getCuttingList', async () => {
+    tasksService.getCuttingList = vitest.fn().mockResolvedValue([{ groupKey: 'test' }]);
+
+    const result = await controller.getCuttingList('5');
+    expect(result).toEqual([{ groupKey: 'test' }]);
+    expect(tasksService.getCuttingList).toHaveBeenCalledWith(5);
+  });
+
+  it('cutDimensionGroup przekazuje dto i użytkownika do serwisu', async () => {
+    tasksService.cutDimensionGroup = vitest.fn().mockResolvedValue({ updatedCount: 2 });
+
+    const dto = { orderId: 5, length: 720, width: 510 };
+    const result = await controller.cutDimensionGroup(dto, mockUser);
+    expect(result).toEqual({ updatedCount: 2 });
+    expect(tasksService.cutDimensionGroup).toHaveBeenCalledWith(dto, mockUser);
+  });
 });

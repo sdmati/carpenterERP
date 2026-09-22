@@ -15,6 +15,7 @@ import { IsEnum } from 'class-validator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
 import { CurrentUser } from '../auth/decorators/current-user.decorator.js';
 import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface.js';
+import { CutDimensionGroupDto } from './dto/cut-dimension-group.dto.js';
 
 export class UpdateTaskStatusDto {
   @ApiProperty({
@@ -41,6 +42,33 @@ export class TasksController {
   ) {
     const parsedOrderId = orderId ? parseInt(orderId, 10) : undefined;
     return this.tasksService.findAll(parsedOrderId, status);
+  }
+
+  @Get('cutting-list')
+  @ApiOperation({
+    summary: 'Pobierz listę rozkroju dla pilarza (formatki pogrupowane wymiarami i materiałem)',
+    description:
+      'Grupuje części według wymiarów i materiału, sumując potrzebne ilości płyt niezależnie od późniejszych nawierceń CNC.',
+  })
+  @ApiQuery({ name: 'orderId', required: false, type: Number, description: 'ID konkretnego zlecenia (opcjonalne)' })
+  getCuttingList(@Query('orderId') orderId?: string) {
+    const parsedOrderId = orderId ? parseInt(orderId, 10) : undefined;
+    return this.tasksService.getCuttingList(parsedOrderId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch('cutting-list/cut')
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Oznacz jako CUT całą grupę wymiarową formatek za jednym razem',
+    description:
+      'Pozwala pilarzowi (SAW_OPERATOR) lub kierownikowi (ADMIN) oznaczyć wszystkie formatki o danych wymiarach w zleceniu jako CUT.',
+  })
+  cutDimensionGroup(
+    @Body() dto: CutDimensionGroupDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.tasksService.cutDimensionGroup(dto, user);
   }
 
   @Get('order/:orderId')

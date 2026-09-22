@@ -50,8 +50,10 @@
 - `POST /auth/login` – logowanie pracownika i pobranie tokenu JWT
 - `GET /auth/me` – dane zalogowanego pracownika
 - `GET /orders/:id/tasks` lub `GET /tasks/order/:orderId` – pobranie listy elementów potrzebnych do konkretnego zamówienia
+- `GET /orders/:id/cutting-list` lub `GET /tasks/cutting-list?orderId=:id` – **lista rozkroju dla pilarza**: formatki pogrupowane po wymiarach (długość x szerokość x grubość) i materiale, sumujące potrzebną liczbę płyt niezależnie od późniejszego wiercenia CNC
+- `PATCH /tasks/cutting-list/cut` – grupowe oznaczenie wszystkich formatek o danym wymiarze w zleceniu jako `CUT` przez `SAW_OPERATOR` / `ADMIN`
 - `GET /tasks/barcode/:barcode` – szybkie odszukanie zadania po kodzie kreskowym na wózku/palecie
-- `PATCH /tasks/:id/status` – aktualizacja statusu formatki przez zalogowanego pracownika (`CUT`, `DRILLED`, `COMPLETED`)
+- `PATCH /tasks/:id/status` – aktualizacja statusu pojedynczej formatki przez zalogowanego pracownika (`CUT`, `DRILLED`, `COMPLETED`)
 - `PATCH /orders/:id/status` – zmiana statusu całego zlecenia na `PACKED` przez `PACKER` (gdy wszystkie części są `DRILLED`)
 - `GET /api` – interaktywna dokumentacja Swagger UI z autoryzacją Bearer JWT
 

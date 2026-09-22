@@ -51,14 +51,22 @@ describe('Role-based Task Workflow (e2e)', () => {
       .expect(200);
     adminToken = adminRes.body.accessToken;
 
-    // Pobierz listę zadań ze zlecenia
-    const tasksRes = await request(app.getHttpServer())
-      .get('/tasks')
-      .expect(200);
+    // Utwórz świeże zlecenie ze statusem PENDING do testów workflow
+    const productsRes = await request(app.getHttpServer()).get('/products').expect(200);
+    const productId = productsRes.body[0].id;
 
-    expect(tasksRes.body.length).toBeGreaterThanOrEqual(2);
-    taskId = tasksRes.body[0].id;
-    uncutTaskId = tasksRes.body[1].id;
+    const freshOrderRes = await request(app.getHttpServer())
+      .post('/orders')
+      .send({
+        productId,
+        quantity: 1,
+        color: 'SONOMA',
+      })
+      .expect(201);
+
+    expect(freshOrderRes.body.tasks.length).toBeGreaterThanOrEqual(2);
+    taskId = freshOrderRes.body.tasks[0].id;
+    uncutTaskId = freshOrderRes.body.tasks[1].id;
   });
 
   afterAll(async () => {
@@ -186,28 +194,36 @@ describe('Role-based Task Workflow (e2e)', () => {
   });
 
   describe('Zlecenie: status PACKED dla całego zlecenia dopiero gdy wszystkie części są DRILLED', () => {
-    it('PACKER NIE MOŻE oznaczyć zlecenia jako PACKED gdy części są PENDING (400 Bad Request)', async () => {
-      const ordersRes = await request(app.getHttpServer())
-        .get('/orders')
-        .expect(200);
-      const orderId = ordersRes.body[0].id;
+    let packOrderId: number;
 
+    beforeAll(async () => {
+      const productsRes = await request(app.getHttpServer()).get('/products').expect(200);
+      const productId = productsRes.body[0].id;
+
+      const orderRes = await request(app.getHttpServer())
+        .post('/orders')
+        .send({
+          productId,
+          quantity: 1,
+          color: 'SONOMA',
+        })
+        .expect(201);
+
+      packOrderId = orderRes.body.id;
+    });
+
+    it('PACKER NIE MOŻE oznaczyć zlecenia jako PACKED gdy części są PENDING (400 Bad Request)', async () => {
       await request(app.getHttpServer())
-        .patch(`/orders/${orderId}/status`)
+        .patch(`/orders/${packOrderId}/status`)
         .set('Authorization', `Bearer ${packerToken}`)
         .send({ status: 'PACKED' })
         .expect(400);
     });
 
     it('PACKER NIE MOŻE oznaczyć zlecenia jako PACKED gdy części są tylko CUT, a nie DRILLED (400 Bad Request)', async () => {
-      const ordersRes = await request(app.getHttpServer())
-        .get('/orders')
-        .expect(200);
-      const orderId = ordersRes.body[0].id;
-
       // Wytnij części
       const tasksRes = await request(app.getHttpServer())
-        .get(`/orders/${orderId}/tasks`)
+        .get(`/orders/${packOrderId}/tasks`)
         .expect(200);
 
       for (const t of tasksRes.body) {
@@ -220,21 +236,16 @@ describe('Role-based Task Workflow (e2e)', () => {
 
       // Pakowacz próbuje spakować wycięte, ale nienawiercone elementy -> 400 Bad Request
       await request(app.getHttpServer())
-        .patch(`/orders/${orderId}/status`)
+        .patch(`/orders/${packOrderId}/status`)
         .set('Authorization', `Bearer ${packerToken}`)
         .send({ status: 'PACKED' })
         .expect(400);
     });
 
     it('Gdy wszystkie części zostaną nawiercone (DRILLED), tylko PACKER lub ADMIN może ustawić PACKED', async () => {
-      const ordersRes = await request(app.getHttpServer())
-        .get('/orders')
-        .expect(200);
-      const orderId = ordersRes.body[0].id;
-
       // Nawierć wszystkie części
       const tasksRes = await request(app.getHttpServer())
-        .get(`/orders/${orderId}/tasks`)
+        .get(`/orders/${packOrderId}/tasks`)
         .expect(200);
 
       for (const t of tasksRes.body) {
@@ -247,14 +258,14 @@ describe('Role-based Task Workflow (e2e)', () => {
 
       // SAW_OPERATOR próbuje spakować zlecenie -> 403 Forbidden
       await request(app.getHttpServer())
-        .patch(`/orders/${orderId}/status`)
+        .patch(`/orders/${packOrderId}/status`)
         .set('Authorization', `Bearer ${sawToken}`)
         .send({ status: 'PACKED' })
         .expect(403);
 
       // PACKER oznacza całe zlecenie jako PACKED -> 200 OK!
       const packRes = await request(app.getHttpServer())
-        .patch(`/orders/${orderId}/status`)
+        .patch(`/orders/${packOrderId}/status`)
         .set('Authorization', `Bearer ${packerToken}`)
         .send({ status: 'PACKED' })
         .expect(200);
@@ -263,10 +274,96 @@ describe('Role-based Task Workflow (e2e)', () => {
 
       // Sprawdzenie czy zadania w zleceniu zostały ukończone (COMPLETED)
       const updatedTasks = await request(app.getHttpServer())
-        .get(`/orders/${orderId}/tasks`)
+        .get(`/orders/${packOrderId}/tasks`)
         .expect(200);
 
       expect(updatedTasks.body.every((t: any) => t.status === TaskStatus.COMPLETED)).toBe(true);
+    });
+  });
+
+  describe('Lista rozkroju dla SAW_OPERATOR (grupowanie po wymiarach)', () => {
+    let testOrderId: number;
+
+    beforeAll(async () => {
+      // Pobierz istniejący mebel z katalogu
+      const productsRes = await request(app.getHttpServer()).get('/products').expect(200);
+      const productId = productsRes.body[0].id;
+
+      // Utwórz nowe zlecenie, aby przetestować grupowanie od stanu początkowego PENDING
+      const orderRes = await request(app.getHttpServer())
+        .post('/orders')
+        .send({
+          productId,
+          quantity: 2,
+          color: 'SONOMA',
+        })
+        .expect(201);
+
+      testOrderId = orderRes.body.id;
+    });
+
+    it('GET /orders/:id/cutting-list grupuje części po wymiarach i sumuje ilości', async () => {
+      const res = await request(app.getHttpServer())
+        .get(`/orders/${testOrderId}/cutting-list`)
+        .expect(200);
+
+      expect(Array.isArray(res.body)).toBe(true);
+
+      // Dla "Szafka dolna kuchenna 60" przy ilości 2 sztuk:
+      // Bok lewy (2 szt.) + Bok prawy (2 szt.) mają wymiary 720 x 510 mm -> łącznie 4 sztuki
+      const group720 = res.body.find(
+        (g: any) => g.dimensions.length === 720 && g.dimensions.width === 510,
+      );
+
+      expect(group720).toBeDefined();
+      expect(group720.totalQuantity).toBe(4);
+      expect(group720.pendingQuantity).toBe(4);
+      expect(group720.cutQuantity).toBe(0);
+      expect(group720.isFullyCut).toBe(false);
+      expect(group720.parts).toHaveLength(2);
+      expect(group720.parts.map((p: any) => p.partName)).toEqual(
+        expect.arrayContaining(['Bok lewy', 'Bok prawy']),
+      );
+    });
+
+    it('SAW_OPERATOR może oznaczyć całą grupę wymiarową jako CUT jednym żądaniem', async () => {
+      const cutRes = await request(app.getHttpServer())
+        .patch('/tasks/cutting-list/cut')
+        .set('Authorization', `Bearer ${sawToken}`)
+        .send({
+          orderId: testOrderId,
+          length: 720,
+          width: 510,
+        })
+        .expect(200);
+
+      expect(cutRes.body.updatedCount).toBe(2);
+      expect(cutRes.body.totalCutQuantity).toBe(4);
+
+      // Sprawdzenie listy rozkroju po wycięciu grupy
+      const listRes = await request(app.getHttpServer())
+        .get(`/orders/${testOrderId}/cutting-list`)
+        .expect(200);
+
+      const group720 = listRes.body.find(
+        (g: any) => g.dimensions.length === 720 && g.dimensions.width === 510,
+      );
+
+      expect(group720.isFullyCut).toBe(true);
+      expect(group720.cutQuantity).toBe(4);
+      expect(group720.pendingQuantity).toBe(0);
+    });
+
+    it('DRILL_OPERATOR NIE MOŻE wywołać rozkroju grupy (403 Forbidden)', async () => {
+      await request(app.getHttpServer())
+        .patch('/tasks/cutting-list/cut')
+        .set('Authorization', `Bearer ${drillToken}`)
+        .send({
+          orderId: testOrderId,
+          length: 564,
+          width: 510,
+        })
+        .expect(403);
     });
   });
 });

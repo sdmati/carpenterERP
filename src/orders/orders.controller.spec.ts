@@ -53,4 +53,12 @@ describe('OrdersController', () => {
     expect(result).toEqual({ id: 1, status: OrderStatus.PACKED });
     expect(ordersService.updateStatus).toHaveBeenCalledWith(1, OrderStatus.PACKED, mockUser);
   });
+
+  it('getCuttingList wywołuje ordersService.getCuttingList', async () => {
+    ordersService.getCuttingList = vitest.fn().mockResolvedValue([{ groupKey: 'test-group' }]);
+
+    const result = await controller.getCuttingList(1);
+    expect(result).toEqual([{ groupKey: 'test-group' }]);
+    expect(ordersService.getCuttingList).toHaveBeenCalledWith(1);
+  });
 });

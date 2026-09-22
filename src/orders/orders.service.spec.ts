@@ -196,4 +196,37 @@ describe('OrdersService', () => {
       expect(result.status).toBe(OrderStatus.PACKED);
     });
   });
+
+  describe('getCuttingList', () => {
+    it('zwraca pogrupowaną listę rozkroju dla zlecenia', async () => {
+      prisma.productionOrder.findUnique = vi.fn().mockResolvedValue({ id: 1 });
+      prisma.productionTask.findMany = vi.fn().mockResolvedValue([
+        {
+          id: 1,
+          quantity: 2,
+          status: TaskStatus.PENDING,
+          barcode: 'B1',
+          partDefinition: {
+            id: 1,
+            name: 'Część 1',
+            length: 500,
+            width: 300,
+            thickness: 18,
+            material: { id: 1, name: 'Dąb', color: Color.SONOMA, thickness: 18 },
+          },
+        },
+      ]);
+
+      const result = await service.getCuttingList(1);
+      expect(result).toHaveLength(1);
+      expect(result[0].totalQuantity).toBe(2);
+      expect(result[0].dimensions.formatted).toBe('500 x 300 x 18 mm');
+    });
+
+    it('rzuca NotFoundException gdy zlecenie nie istnieje', async () => {
+      prisma.productionOrder.findUnique = vi.fn().mockResolvedValue(null);
+
+      await expect(service.getCuttingList(999)).rejects.toThrow(NotFoundException);
+    });
+  });
 });

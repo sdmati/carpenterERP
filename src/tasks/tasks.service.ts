@@ -8,6 +8,9 @@ import {
 import { PrismaService } from '../prisma/prisma.service.js';
 import { TaskStatus, OrderStatus, Role } from '@prisma/client';
 import { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface.js';
+import { CuttingListItemDto } from './dto/cutting-list-item.dto.js';
+import { CutDimensionGroupDto } from './dto/cut-dimension-group.dto.js';
+import { groupTasksIntoCuttingList } from './utils/cutting-list.util.js';
 
 export const ROLE_ALLOWED_STATUS: Record<Role, TaskStatus[]> = {
   [Role.SAW_OPERATOR]: [TaskStatus.CUT],
@@ -211,5 +214,87 @@ export class TasksService {
     }
 
     return updatedTask;
+  }
+
+  async getCuttingList(orderId?: number): Promise<CuttingListItemDto[]> {
+    const tasks = await this.prisma.productionTask.findMany({
+      where: orderId ? { orderId } : {},
+      include: {
+        partDefinition: {
+          include: {
+            material: true,
+          },
+        },
+        order: {
+          include: {
+            product: true,
+          },
+        },
+      },
+    });
+
+    return groupTasksIntoCuttingList(tasks);
+  }
+
+  async cutDimensionGroup(dto: CutDimensionGroupDto, user?: AuthenticatedUser) {
+    if (!user) {
+      throw new UnauthorizedException('Wymagane jest zalogowanie, aby dokonać rozkroju grupy.');
+    }
+
+    if (user.role !== Role.SAW_OPERATOR && user.role !== Role.ADMIN) {
+      throw new ForbiddenException(
+        `Brak uprawnień. Tylko pracownik z rolą SAW_OPERATOR lub ADMIN może oznaczać grupy jako CUT. Twoja rola: ${user.role}.`,
+      );
+    }
+
+    const where: any = {
+      orderId: dto.orderId,
+      partDefinition: {
+        length: dto.length,
+        width: dto.width,
+      },
+    };
+
+    if (dto.materialId) {
+      where.partDefinition.materialId = dto.materialId;
+    }
+
+    const tasks = await this.prisma.productionTask.findMany({
+      where,
+      include: {
+        partDefinition: true,
+      },
+    });
+
+    if (tasks.length === 0) {
+      throw new NotFoundException(
+        `Nie znaleziono formatek o wymiarach ${dto.length} x ${dto.width} mm w zleceniu #${dto.orderId}.`,
+      );
+    }
+
+    const pendingTasks = tasks.filter((t) => t.status === TaskStatus.PENDING);
+    if (pendingTasks.length === 0) {
+      return {
+        message: `Wszystkie formatki o wymiarach ${dto.length} x ${dto.width} mm w zleceniu #${dto.orderId} zostały już wcześniej wycięte.`,
+        updatedCount: 0,
+        tasks,
+      };
+    }
+
+    const updatedTasks = [];
+    let totalCutQuantity = 0;
+
+    for (const t of pendingTasks) {
+      const updated = await this.updateStatus(t.id, TaskStatus.CUT, user);
+      updatedTasks.push(updated);
+      totalCutQuantity += t.quantity;
+    }
+
+    return {
+      message: `Pomyślnie oznaczono jako CUT formatki o wymiarach ${dto.length} x ${dto.width} mm (łącznie ${totalCutQuantity} szt. w ${updatedTasks.length} zadaniach).`,
+      updatedCount: updatedTasks.length,
+      totalCutQuantity,
+      tasks: updatedTasks,
+    };
   }
 }
