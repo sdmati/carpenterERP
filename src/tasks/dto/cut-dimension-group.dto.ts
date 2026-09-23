@@ -22,4 +22,13 @@ export class CutDimensionGroupDto {
   @IsInt()
   @IsPositive()
   materialId?: number;
+
+  @ApiPropertyOptional({
+    description: 'Opcjonalna liczba całych arkuszy płyty zużytych podczas rozkroju',
+    example: 2,
+  })
+  @IsOptional()
+  @IsInt()
+  @IsPositive()
+  sheetsUsed?: number;
 }

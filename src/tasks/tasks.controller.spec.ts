@@ -93,4 +93,72 @@ describe('TasksController', () => {
     expect(result).toEqual({ updatedCount: 2 });
     expect(tasksService.cutDimensionGroup).toHaveBeenCalledWith(dto, mockUser);
   });
+
+  it('getDrillingList przekazuje orderId i readyOnly do serwisu', async () => {
+    tasksService.getDrillingList = vitest.fn().mockResolvedValue([{ taskId: 1 }]);
+
+    const result = await controller.getDrillingList('5', 'true');
+    expect(result).toEqual([{ taskId: 1 }]);
+    expect(tasksService.getDrillingList).toHaveBeenCalledWith(5, true);
+  });
+
+  it('getDrillingSummary przekazuje orderId do serwisu', async () => {
+    tasksService.getOrderDrillingSummary = vitest.fn().mockResolvedValue({ orderId: 5, totalParts: 10 });
+
+    const result = await controller.getDrillingSummary(5);
+    expect(result).toEqual({ orderId: 5, totalParts: 10 });
+    expect(tasksService.getOrderDrillingSummary).toHaveBeenCalledWith(5);
+  });
+
+  it('drillBatch przekazuje dto i użytkownika do serwisu', async () => {
+    tasksService.drillBatch = vitest.fn().mockResolvedValue({ updatedCount: 3 });
+
+    const dto = { orderId: 5 };
+    const result = await controller.drillBatch(dto, mockUser);
+    expect(result).toEqual({ updatedCount: 3 });
+    expect(tasksService.drillBatch).toHaveBeenCalledWith(dto, mockUser);
+  });
+
+  it('edgeBatch przekazuje dto i użytkownika do serwisu', async () => {
+    tasksService.edgeBatch = vitest.fn().mockResolvedValue({ updatedCount: 2 });
+
+    const dto = { orderId: 5 };
+    const result = await controller.edgeBatch(dto, mockUser);
+    expect(result).toEqual({ updatedCount: 2 });
+    expect(tasksService.edgeBatch).toHaveBeenCalledWith(dto, mockUser);
+  });
+
+  it('getPackingList przekazuje orderId i readyOnly do serwisu', async () => {
+    tasksService.getPackingList = vitest.fn().mockResolvedValue([{ taskId: 2 }]);
+
+    const result = await controller.getPackingList('5', 'false');
+    expect(result).toEqual([{ taskId: 2 }]);
+    expect(tasksService.getPackingList).toHaveBeenCalledWith(5, false);
+  });
+
+  it('getPackingSummary przekazuje orderId do serwisu', async () => {
+    tasksService.getOrderPackingSummary = vitest.fn().mockResolvedValue({ orderId: 5, packedParts: 4 });
+
+    const result = await controller.getPackingSummary(5);
+    expect(result).toEqual({ orderId: 5, packedParts: 4 });
+    expect(tasksService.getOrderPackingSummary).toHaveBeenCalledWith(5);
+  });
+
+  it('packBatch przekazuje dto i użytkownika do serwisu', async () => {
+    tasksService.packBatch = vitest.fn().mockResolvedValue({ updatedCount: 4 });
+
+    const dto = { orderId: 5 };
+    const result = await controller.packBatch(dto, mockUser);
+    expect(result).toEqual({ updatedCount: 4 });
+    expect(tasksService.packBatch).toHaveBeenCalledWith(dto, mockUser);
+  });
+
+  it('updateBatchStatus przekazuje dto i użytkownika do serwisu', async () => {
+    tasksService.updateBatchStatus = vitest.fn().mockResolvedValue({ updatedCount: 2 });
+
+    const dto = { status: TaskStatus.EDGED, orderId: 5 };
+    const result = await controller.updateBatchStatus(dto, mockUser);
+    expect(result).toEqual({ updatedCount: 2 });
+    expect(tasksService.updateBatchStatus).toHaveBeenCalledWith(dto, mockUser);
+  });
 });

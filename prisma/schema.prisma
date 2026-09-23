@@ -38,6 +38,15 @@ model PartDefinition {
   width     Float // Wymiar w mm
   thickness Float
 
+  // Informacje o okleinowaniu (Edge banding)
+  edgeLength1       Boolean @default(false) // 1. krawędź wzdłuż długości
+  edgeLength2       Boolean @default(false) // 2. krawędź wzdłuż długości
+  edgeWidth1        Boolean @default(false) // 1. krawędź wzdłuż szerokości
+  edgeWidth2        Boolean @default(false) // 2. krawędź wzdłuż szerokości
+  edgeTapeType      String? // np. "ABS", "PCV", "Melamina"
+  edgeTapeColor     Color?  // Kolor okleiny (np. SONOMA, WHITE)
+  edgeTapeThickness Float?  // Grubość okleiny w mm (np. 0.8, 1.0, 2.0)
+
   productId Int
   product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
@@ -57,15 +66,32 @@ model Machine {
 
 // 5. Zlecenie wyprodukowania
 model ProductionOrder {
-  id       Int         @id @default(autoincrement())
-  quantity Int // Ilość zamawianych mebli
-  color    Color
-  status   OrderStatus @default(PENDING)
+  id               Int         @id @default(autoincrement())
+  quantity         Int // Ilość zamawianych mebli
+  color            Color
+  status           OrderStatus @default(PENDING)
+  sheetsUsed       Int         @default(0) // Liczba zużytych arkuszy płyty wpisana przez pilarza
+  edgeTapeDeducted Boolean     @default(false) // Czy okleina została już odliczona z magazynu
 
   productId Int
   product   Product @relation(fields: [productId], references: [id])
 
   tasks ProductionTask[]
+}
+
+// 6. Magazyn okleiny (Edge banding)
+model EdgeTape {
+  id          Int      @id @default(autoincrement())
+  name        String   // np. "Okleina ABS Sonoma 1.0mm"
+  type        String   // np. "ABS", "Melamina", "PCV"
+  color       Color    // np. SONOMA, WHITE
+  thickness   Float    // Grubość okleiny w mm (np. 0.8, 1.0, 2.0)
+  width       Float?   // Szerokość taśmy w mm (np. 22 mm)
+  stockMeters Float    @default(0) // Stan magazynowy w metrach bieżących (mb)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([type, color, thickness])
 }
 
 // 6. Partia produkcyjna / wózek technologiczny
@@ -95,6 +121,7 @@ enum OrderStatus {
 enum TaskStatus {
   PENDING
   CUT
+  EDGED
   DRILLED
   COMPLETED
 }
@@ -113,14 +140,16 @@ generator erd {
 
 enum Role {
   SAW_OPERATOR // Piła panelowa -> może CUT
+  EDGE_BANDER_OPERATOR // Okleiniarka -> może EDGED
   DRILL_OPERATOR // Centrum wiertarskie CNC -> może DRILLED
-  PACKER // Pakownia -> może COMPLETED
+  PACKER // Pakownia -> może COMPLETED / PACKED
   ADMIN // Kierownik - moze wszystko
 }
 
 enum MachineType {
   DRILL
   SAW
+  EDGE_BANDER
 }
 
 model User {

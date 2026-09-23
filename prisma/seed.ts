@@ -11,12 +11,14 @@ async function main() {
   await prisma.partDefinition.deleteMany();
   await prisma.product.deleteMany();
   await prisma.material.deleteMany();
+  await prisma.edgeTape.deleteMany();
   await prisma.machine.deleteMany();
   await prisma.user.deleteMany();
 
   console.log('--- Tworzenie użytkowników z rolami ---');
   const passwordHashAdmin = await bcrypt.hash('admin123', 10);
   const passwordHashSaw = await bcrypt.hash('saw123', 10);
+  const passwordHashEdge = await bcrypt.hash('edge123', 10);
   const passwordHashDrill = await bcrypt.hash('drill123', 10);
   const passwordHashPacker = await bcrypt.hash('packer123', 10);
 
@@ -35,6 +37,15 @@ async function main() {
       password: passwordHashSaw,
       name: 'Jan Pilarz',
       role: Role.SAW_OPERATOR,
+    },
+  });
+
+  const edgeUser = await prisma.user.create({
+    data: {
+      username: 'edge_operator',
+      password: passwordHashEdge,
+      name: 'Marek Okleiniarz',
+      role: Role.EDGE_BANDER_OPERATOR,
     },
   });
 
@@ -59,8 +70,18 @@ async function main() {
   console.log('Utworzono użytkowników:', {
     admin: admin.username,
     saw: sawUser.username,
+    edge: edgeUser.username,
     drill: drillUser.username,
     packer: packerUser.username,
+  });
+
+  console.log('--- Tworzenie maszyn na hali ---');
+  await prisma.machine.createMany({
+    data: [
+      { name: 'Piła panelowa Giben SP', type: 'SAW' },
+      { name: 'Okleiniarka Brandt Ambition', type: 'EDGE_BANDER' },
+      { name: 'Centrum wiertarskie CNC Biesse Skipper 100', type: 'DRILL' },
+    ],
   });
 
   console.log('--- Tworzenie materiałów magazynowych ---');
@@ -88,6 +109,44 @@ async function main() {
     },
   });
 
+  console.log('--- Tworzenie magazynu okleiny (obrzeża meblowe) ---');
+  await prisma.edgeTape.createMany({
+    data: [
+      {
+        name: 'Okleina ABS Dąb Sonoma 1.0mm',
+        type: 'ABS',
+        color: Color.SONOMA,
+        thickness: 1.0,
+        width: 22,
+        stockMeters: 500,
+      },
+      {
+        name: 'Okleina Melamina Dąb Sonoma 0.8mm',
+        type: 'Melamina',
+        color: Color.SONOMA,
+        thickness: 0.8,
+        width: 22,
+        stockMeters: 300,
+      },
+      {
+        name: 'Okleina ABS Biała 1.0mm',
+        type: 'ABS',
+        color: Color.WHITE,
+        thickness: 1.0,
+        width: 22,
+        stockMeters: 400,
+      },
+      {
+        name: 'Okleina Melamina Biała 0.8mm',
+        type: 'Melamina',
+        color: Color.WHITE,
+        thickness: 0.8,
+        width: 22,
+        stockMeters: 250,
+      },
+    ],
+  });
+
   console.log('--- Tworzenie katalogu mebli i części ---');
   const product = await prisma.product.create({
     data: {
@@ -100,6 +159,13 @@ async function main() {
             length: 720,
             width: 510,
             thickness: 18,
+            edgeLength1: true,
+            edgeLength2: false,
+            edgeWidth1: true,
+            edgeWidth2: false,
+            edgeTapeType: 'ABS',
+            edgeTapeColor: Color.SONOMA,
+            edgeTapeThickness: 1.0,
             materialId: matSonoma.id,
           },
           {
@@ -108,6 +174,13 @@ async function main() {
             length: 720,
             width: 510,
             thickness: 18,
+            edgeLength1: true,
+            edgeLength2: false,
+            edgeWidth1: true,
+            edgeWidth2: false,
+            edgeTapeType: 'ABS',
+            edgeTapeColor: Color.SONOMA,
+            edgeTapeThickness: 1.0,
             materialId: matSonoma.id,
           },
           {
@@ -116,6 +189,13 @@ async function main() {
             length: 564,
             width: 510,
             thickness: 18,
+            edgeLength1: true,
+            edgeLength2: false,
+            edgeWidth1: false,
+            edgeWidth2: false,
+            edgeTapeType: 'ABS',
+            edgeTapeColor: Color.SONOMA,
+            edgeTapeThickness: 1.0,
             materialId: matSonoma.id,
           },
           {
@@ -124,6 +204,13 @@ async function main() {
             length: 564,
             width: 490,
             thickness: 18,
+            edgeLength1: true,
+            edgeLength2: false,
+            edgeWidth1: false,
+            edgeWidth2: false,
+            edgeTapeType: 'Melamina',
+            edgeTapeColor: Color.SONOMA,
+            edgeTapeThickness: 0.8,
             materialId: matSonoma.id,
           },
           {
@@ -132,6 +219,10 @@ async function main() {
             length: 564,
             width: 100,
             thickness: 18,
+            edgeLength1: false,
+            edgeLength2: false,
+            edgeWidth1: false,
+            edgeWidth2: false,
             materialId: matSonoma.id,
           },
         ],

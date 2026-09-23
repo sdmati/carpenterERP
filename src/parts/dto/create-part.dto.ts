@@ -1,11 +1,15 @@
 import { ApiProperty } from '@nestjs/swagger';
 import {
+  IsBoolean,
+  IsEnum,
   IsInt,
   IsNotEmpty,
   IsNumber,
+  IsOptional,
   IsPositive,
   IsString,
 } from 'class-validator';
+import { Color } from '@prisma/client';
 
 export class CreatePartDto {
   @ApiProperty({
@@ -48,6 +52,75 @@ export class CreatePartDto {
   @IsPositive()
   @IsNotEmpty()
   thickness: number;
+
+  @ApiProperty({
+    description: 'Czy pierwsza krawędź wzdłuż długości (D1) ma być oklejona',
+    example: true,
+    required: false,
+    default: false,
+  })
+  @IsBoolean()
+  @IsOptional()
+  edgeLength1?: boolean;
+
+  @ApiProperty({
+    description: 'Czy druga krawędź wzdłuż długości (D2) ma być oklejona',
+    example: false,
+    required: false,
+    default: false,
+  })
+  @IsBoolean()
+  @IsOptional()
+  edgeLength2?: boolean;
+
+  @ApiProperty({
+    description: 'Czy pierwsza krawędź wzdłuż szerokości (S1) ma być oklejona',
+    example: true,
+    required: false,
+    default: false,
+  })
+  @IsBoolean()
+  @IsOptional()
+  edgeWidth1?: boolean;
+
+  @ApiProperty({
+    description: 'Czy druga krawędź wzdłuż szerokości (S2) ma być oklejona',
+    example: false,
+    required: false,
+    default: false,
+  })
+  @IsBoolean()
+  @IsOptional()
+  edgeWidth2?: boolean;
+
+  @ApiProperty({
+    description: 'Typ obrzeża/okleiny (np. ABS, PCV, Melamina)',
+    example: 'ABS',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  edgeTapeType?: string;
+
+  @ApiProperty({
+    description: 'Kolor obrzeża/okleiny',
+    enum: Color,
+    example: Color.SONOMA,
+    required: false,
+  })
+  @IsEnum(Color)
+  @IsOptional()
+  edgeTapeColor?: Color;
+
+  @ApiProperty({
+    description: 'Grubość obrzeża/okleiny w mm (np. 0.8, 1.0, 2.0)',
+    example: 1.0,
+    required: false,
+  })
+  @IsNumber()
+  @IsPositive()
+  @IsOptional()
+  edgeTapeThickness?: number;
 
   @ApiProperty({
     description: 'Identyfikator mebla (produktu), do którego przypisany jest element',

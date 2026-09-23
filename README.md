@@ -28,9 +28,13 @@
 ### Role użytkowników i uprawnienia do oznaczania etapów produkcji:
 - **`SAW_OPERATOR` (Operator piły / rozkroju)**:
   - Może oznaczać formatki/partie jako **`CUT`** (po rozkroju).
-  - Nie ma uprawnień do oznaczania `DRILLED` ani `COMPLETED`.
+  - Nie ma uprawnień do oznaczania `EDGED`, `DRILLED` ani `COMPLETED`.
+- **`EDGE_BANDER_OPERATOR` (Operator okleiniarki)**:
+  - Może oznaczać wycięte formatki (`CUT`) jako **`EDGED`** (po oklejeniu krawędzi).
+  - Nie może oklejać niewyciętych formatek (`PENDING`) ani oznaczać jako `CUT`, `DRILLED` / `COMPLETED`.
 - **`DRILL_OPERATOR` (Operator wiertarki CNC)**:
-  - Może oznaczać wycięte formatki (`CUT`) jako **`DRILLED`** (po nawierceniu).
+  - Może oznaczać formatki jako **`DRILLED`** (po nawierceniu).
+  - Jeżeli formatka wymaga oklejenia krawędzi (przynajmniej jedna krawędź D1, D2, S1, S2), musi zostać najpierw oklejona (**`EDGED`**). Formatki niewymagające oklejenia mogą przejść bezpośrednio z **`CUT`** do **`DRILLED`**.
   - Nie może wiercić niewyciętych formatek ani oznaczać jako `CUT` / `COMPLETED`.
 - **`PACKER` (Pakowacz)**:
   - Może oznaczyć **całe zlecenie produkcyjne** jako **`PACKED`** (poprzez `PATCH /orders/:id/status`), pod warunkiem że **wszystkie części w zleceniu zostały nawiercone (`DRILLED`)**. Po spakowaniu zlecenia zadania automatycznie uzyskują status `COMPLETED`.
@@ -43,6 +47,7 @@
 | :--- | :--- | :--- |
 | `admin` | `admin123` | `ADMIN` |
 | `saw_operator` | `saw123` | `SAW_OPERATOR` |
+| `edge_operator` | `edge123` | `EDGE_BANDER_OPERATOR` |
 | `drill_operator` | `drill123` | `DRILL_OPERATOR` |
 | `packer` | `packer123` | `PACKER` |
 
@@ -50,11 +55,41 @@
 - `POST /auth/login` – logowanie pracownika i pobranie tokenu JWT
 - `GET /auth/me` – dane zalogowanego pracownika
 - `GET /orders/:id/tasks` lub `GET /tasks/order/:orderId` – pobranie listy elementów potrzebnych do konkretnego zamówienia
+
+#### 1. Piła panelowa / Rozkrój (CUT)
 - `GET /orders/:id/cutting-list` lub `GET /tasks/cutting-list?orderId=:id` – **lista rozkroju dla pilarza**: formatki pogrupowane po wymiarach (długość x szerokość x grubość) i materiale, sumujące potrzebną liczbę płyt niezależnie od późniejszego wiercenia CNC
-- `PATCH /tasks/cutting-list/cut` – grupowe oznaczenie wszystkich formatek o danym wymiarze w zleceniu jako `CUT` przez `SAW_OPERATOR` / `ADMIN`
-- `GET /tasks/barcode/:barcode` – szybkie odszukanie zadania po kodzie kreskowym na wózku/palecie
-- `PATCH /tasks/:id/status` – aktualizacja statusu pojedynczej formatki przez zalogowanego pracownika (`CUT`, `DRILLED`, `COMPLETED`)
+- `PATCH /tasks/cutting-list/cut` – grupowe oznaczenie wszystkich formatek o danym wymiarze w zleceniu jako `CUT` przez `SAW_OPERATOR` / `ADMIN` (opcjonalnie z parametrem `sheetsUsed`)
+- `POST /materials/:id/consume` – **ręczne wpisanie zużycia arkuszy płyty przez pilarza (`SAW_OPERATOR` / `ADMIN`)**: odejmuje podaną liczbę całych arkuszy ze stanu magazynowego i aktualizuje powierzchnię w m2
+- `POST /orders/:id/consume-sheets` – **wpisanie zużycia arkuszy płyty dla zlecenia przez pilarza (`SAW_OPERATOR` / `ADMIN`)**: odejmuje arkusze z magazynu i zapisuje sumę w zleceniu (`order.sheetsUsed`)
+
+#### 2. Okleiniarka (EDGE-BANDING)
+- `GET /edge-tapes` – **stany magazynowe okleiny**: lista obrzeży meblowych (typ, kolor, grubość, szerokość) i ich stan magazynowy w metrach bieżących (mb)
+- `GET /edge-tapes/check-availability?orderId=:id` lub `GET /orders/:id/edge-tape-check` – **automatyczne sprawdzanie dostępności okleiny**: weryfikuje czy stan magazynowy pokrywa zapotrzebowanie zlecenia i wylicza ewentualne braki
+- `GET /orders/:id/edge-banding` – **zapotrzebowanie na okleinowanie dla zlecenia**: wylicza metry bieżące okleiny (mb) dla całej partii zlecenia, grupuje zapotrzebowanie wg rodzaju obrzeża (typ, kolor, grubość), prezentuje dostępność magazynową oraz wyliczenia per element
+- `GET /tasks/edge-banding?orderId=:id` – lista partii z informacjami o oklejaniu krawędzi (D1, D2, S1, S2, metry/szt, metry łącznie) dla operatora okleiniarki
+- `GET /tasks/:id/edge-banding` – zapotrzebowanie na okleinę dla pojedynczej partii / zadania
+- `PATCH /tasks/edge-banding/edge` – **hurtowe oznaczenie partii jako oklejone (`EDGED`)**: dla `EDGE_BANDER_OPERATOR` lub `ADMIN` (przyjmuje `orderId` lub `taskIds`)
+- `POST /edge-tapes/:id/consume` – **ręczne odliczenie okleiny przez operatora okleiniarki (`EDGE_BANDER_OPERATOR` / `ADMIN`)**: pozwala odliczyć zadaną liczbę metrów bieżących (np. odpad przy ustawianiu maszyny)
+- `POST /orders/:id/deduct-edge-tape` – **ręczne odliczenie okleiny dla zlecenia przez operatora okleiniarki (`EDGE_BANDER_OPERATOR` / `ADMIN`)**: zdejmuje wyliczone metry ze stanu magazynowego i oznacza zlecenie
+- Automatyczne odejmowanie okleiny z magazynu następuje również samoczynnie po skończeniu serii mebli (status zlecenia `PACKED` lub `COMPLETED`)
+
+#### 3. Wiertarka CNC (DRILLING)
+- `GET /tasks/drilling-list?orderId=:id&readyOnly=true` – **lista zadań wiertarskich**: formatki z informacją o schemacie nawierceń, wymiarach i fladze gotowości technologicznej `isReadyToDrill`
+- `GET /orders/:id/drilling-list?readyOnly=true` – lista nawierceń dla wskazanego zlecenia
+- `GET /tasks/drilling-summary?orderId=:id` oraz `GET /orders/:id/drilling-summary` – **podsumowanie wiertarskie**: statystyka partii i sztuk gotowych do wiercenia, już nawierconych oraz flaga `isFullyDrilled`
+- `PATCH /tasks/drilling-list/drill` – **hurtowe oznaczenie partii jako nawiercone (`DRILLED`)**: dla `DRILL_OPERATOR` lub `ADMIN` (przyjmuje `orderId` lub `taskIds`, pilnuje by formatki były uprzednio wycięte i oklejone)
+
+#### 4. Pakownia (PACKING)
+- `GET /tasks/packing-list?orderId=:id&readyOnly=true` – **lista partii do spakowania**: formatki z flagą gotowości do pakowania `isReadyToPack` (gotowe po etapie `DRILLED`)
+- `GET /orders/:id/packing-list?readyOnly=true` – lista partii do spakowania dla konkretnego zlecenia
+- `GET /tasks/packing-summary?orderId=:id` oraz `GET /orders/:id/packing-summary` – **podsumowanie pakowania**: postęp procentowy (`completionPercentage`), liczba formatek spakowanych oraz flaga `isFullyPacked`
+- `PATCH /tasks/packing-list/pack` – **hurtowe oznaczenie partii jako spakowane (`COMPLETED`)**: dla `PACKER` lub `ADMIN` (przyjmuje `orderId` lub `taskIds`)
 - `PATCH /orders/:id/status` – zmiana statusu całego zlecenia na `PACKED` przez `PACKER` (gdy wszystkie części są `DRILLED`)
+
+#### Operacje ogólne i kod kreskowy
+- `PATCH /tasks/batch-status` – uniwersalna hurtowa zmiana statusu partii (`CUT`, `EDGED`, `DRILLED`, `COMPLETED`) z weryfikacją uprawnień zalogowanej roli
+- `GET /tasks/barcode/:barcode` – szybkie odszukanie zadania po kodzie kreskowym na wózku/palecie
+- `PATCH /tasks/:id/status` – aktualizacja statusu pojedynczej formatki przez uprawnionego pracownika (`CUT`, `EDGED`, `DRILLED`, `COMPLETED`)
 - `GET /api` – interaktywna dokumentacja Swagger UI z autoryzacją Bearer JWT
 
 

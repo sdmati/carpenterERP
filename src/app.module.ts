@@ -10,6 +10,7 @@ import { OrdersModule } from './orders/orders.module.js';
 import { TasksModule } from './tasks/tasks.module.js';
 import { UsersModule } from './users/users.module.js';
 import { AuthModule } from './auth/auth.module.js';
+import { EdgeTapesModule } from './edge-tapes/edge-tapes.module.js';
 
 export const { ObserveModule, ObserveInstrument } = createObserveModule();
 
@@ -30,6 +31,7 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule();
     PartsModule,
     OrdersModule,
     TasksModule,
+    EdgeTapesModule,
   ],
   controllers: [AppController],
   providers: [AppService],
