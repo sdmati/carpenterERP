@@ -1,182 +1,368 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# 🪚 Stolarz ERP – System Zarządzania Produkcją Mebli Skrzyniowych
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+**Stolarz ERP** to zaawansowany system backendowy (REST API) zaprojektowany dla nowoczesnych stolarni, fabryk mebli oraz zakładów obróbki płyt drewnopochodnych. System digitalizuje i automatyzuje obieg technologiczny formatek meblowych na hali produkcyjnej – od magazynu surowców, przez rozkrój, okleinowanie krawędzi i wiercenie CNC, aż po pakowanie gotowych paczek mebli.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+---
 
-## Description
+## 📖 Spis treści
+1. [O projekcie i cel systemu](#-o-projekcie-i-cel-systemu)
+2. [Główne moduły i możliwości](#-główne-moduły-i-możliwości)
+3. [Przepływ technologiczny (Workstation Parity)](#-przepływ-technologiczny-workstation-parity)
+4. [Role pracowników i model uprawnień (RBAC)](#-role-pracowników-i-model-uprawnień-rbac)
+5. [Architektura i technologie](#-architektura-i-technologie)
+6. [Instalacja i pierwsze uruchomienie (Jak używać)](#-instalacja-i-pierwsze-uruchomienie-jak-używać)
+7. [Domyślne konta testowe](#-domyślne-konta-testowe)
+8. [Przykładowy cykl produkcyjny krok po kroku (Tutorial)](#-przykładowy-cykl-produkcyjny-krok-po-kroku-tutorial)
+9. [Pełna lista endpointów API](#-pełna-lista-endpointów-api)
+10. [Testy i jakość kodu](#-testy-i-jakość-kodu)
 
-**Stolarz ERP** to system zarządzania produkcją mebli, stanami magazynowymi płyt i zleceniami produkcyjnymi na hali produkcyjnej.
+---
 
-### Role użytkowników i uprawnienia do oznaczania etapów produkcji:
-- **`SAW_OPERATOR` (Operator piły / rozkroju)**:
-  - Może oznaczać formatki/partie jako **`CUT`** (po rozkroju).
-  - Nie ma uprawnień do oznaczania `EDGED`, `DRILLED` ani `COMPLETED`.
-- **`EDGE_BANDER_OPERATOR` (Operator okleiniarki)**:
-  - Może oznaczać wycięte formatki (`CUT`) jako **`EDGED`** (po oklejeniu krawędzi).
-  - Nie może oklejać niewyciętych formatek (`PENDING`) ani oznaczać jako `CUT`, `DRILLED` / `COMPLETED`.
-- **`DRILL_OPERATOR` (Operator wiertarki CNC)**:
-  - Może oznaczać formatki jako **`DRILLED`** (po nawierceniu).
-  - Jeżeli formatka wymaga oklejenia krawędzi (przynajmniej jedna krawędź D1, D2, S1, S2), musi zostać najpierw oklejona (**`EDGED`**). Formatki niewymagające oklejenia mogą przejść bezpośrednio z **`CUT`** do **`DRILLED`**.
-  - Nie może wiercić niewyciętych formatek ani oznaczać jako `CUT` / `COMPLETED`.
-- **`PACKER` (Pakowacz)**:
-  - Może oznaczyć **całe zlecenie produkcyjne** jako **`PACKED`** (poprzez `PATCH /orders/:id/status`), pod warunkiem że **wszystkie części w zleceniu zostały nawiercone (`DRILLED`)**. Po spakowaniu zlecenia zadania automatycznie uzyskują status `COMPLETED`.
-  - Może również oznaczać poszczególne formatki jako `COMPLETED`.
-- **`ADMIN` (Kierownik produkcji / Administrator)**:
-  - Posiada pełne uprawnienia do wszystkich statusów zadań i zleceń (`PENDING`, `IN_PROGRESS`, `PACKED`, `COMPLETED`), zarządzania pracownikami, produktami, materiałami i zleceniami.
+## 🎯 O projekcie i cel systemu
 
-### Domyślne konta testowe (seed):
-| Login | Hasło | Rola |
-| :--- | :--- | :--- |
-| `admin` | `admin123` | `ADMIN` |
-| `saw_operator` | `saw123` | `SAW_OPERATOR` |
-| `edge_operator` | `edge123` | `EDGE_BANDER_OPERATOR` |
-| `drill_operator` | `drill123` | `DRILL_OPERATOR` |
-| `packer` | `packer123` | `PACKER` |
+Tradycyjna produkcja mebli skrzyniowych (kuchnie, szafy, komody) często boryka się z chaosem informacyjnym na hali produkcyjnej:
+- formatki gubią się między gniazdami produkcyjnymi,
+- brakuje bieżącej kontroli nad zużyciem drogich płyt laminowanych oraz obrzeży (okleiny),
+- pracownicy wykonują operacje w złej kolejności (np. próba wiercenia otworów przed oklejeniem krawędzi lub cięciem),
+- brak jest natychmiastowej weryfikacji, czy na magazynie jest wystarczająco dużo metrów bieżących okleiny w danym dekorze przed rozpoczęciem zlecenia.
 
-### Kluczowe endpointy API:
-- `POST /auth/login` – logowanie pracownika i pobranie tokenu JWT
-- `GET /auth/me` – dane zalogowanego pracownika
-- `GET /orders/:id/tasks` lub `GET /tasks/order/:orderId` – pobranie listy elementów potrzebnych do konkretnego zamówienia
+**Stolarz ERP** rozwiązuje te problemy poprzez:
+1. **Pełną sekwencję technologiczną**: wymuszenie prawidłowej kolejności obróbki (`CUT` $\rightarrow$ `EDGED` $\rightarrow$ `DRILLED` $\rightarrow$ `COMPLETED`).
+2. **Śledzenie partii i formatki**: generowanie unikalnych kodów kreskowych (`barcode`) na wózki technologiczne i palety.
+3. **Zrównanie stanowisk roboczych (Workstation Parity)**: dedykowane widoki, listy robocze i operacje hurtowe dla każdego z 4 gniazd produkcyjnych.
+4. **Automatyczną gospodarkę magazynową**: precyzyjne przeliczanie metrów bieżących okleiny, sprawdzanie dostępności oraz ewidencję zużycia arkuszy płyt przez pilarza.
 
-#### 1. Piła panelowa / Rozkrój (CUT)
-- `GET /orders/:id/cutting-list` lub `GET /tasks/cutting-list?orderId=:id` – **lista rozkroju dla pilarza**: formatki pogrupowane po wymiarach (długość x szerokość x grubość) i materiale, sumujące potrzebną liczbę płyt niezależnie od późniejszego wiercenia CNC
-- `PATCH /tasks/cutting-list/cut` – grupowe oznaczenie wszystkich formatek o danym wymiarze w zleceniu jako `CUT` przez `SAW_OPERATOR` / `ADMIN` (opcjonalnie z parametrem `sheetsUsed`)
-- `POST /materials/:id/consume` – **ręczne wpisanie zużycia arkuszy płyty przez pilarza (`SAW_OPERATOR` / `ADMIN`)**: odejmuje podaną liczbę całych arkuszy ze stanu magazynowego i aktualizuje powierzchnię w m2
-- `POST /orders/:id/consume-sheets` – **wpisanie zużycia arkuszy płyty dla zlecenia przez pilarza (`SAW_OPERATOR` / `ADMIN`)**: odejmuje arkusze z magazynu i zapisuje sumę w zleceniu (`order.sheetsUsed`)
+---
 
-#### 2. Okleiniarka (EDGE-BANDING)
-- `GET /edge-tapes` – **stany magazynowe okleiny**: lista obrzeży meblowych (typ, kolor, grubość, szerokość) i ich stan magazynowy w metrach bieżących (mb)
-- `GET /edge-tapes/check-availability?orderId=:id` lub `GET /orders/:id/edge-tape-check` – **automatyczne sprawdzanie dostępności okleiny**: weryfikuje czy stan magazynowy pokrywa zapotrzebowanie zlecenia i wylicza ewentualne braki
-- `GET /orders/:id/edge-banding` – **zapotrzebowanie na okleinowanie dla zlecenia**: wylicza metry bieżące okleiny (mb) dla całej partii zlecenia, grupuje zapotrzebowanie wg rodzaju obrzeża (typ, kolor, grubość), prezentuje dostępność magazynową oraz wyliczenia per element
-- `GET /tasks/edge-banding?orderId=:id` – lista partii z informacjami o oklejaniu krawędzi (D1, D2, S1, S2, metry/szt, metry łącznie) dla operatora okleiniarki
-- `GET /tasks/:id/edge-banding` – zapotrzebowanie na okleinę dla pojedynczej partii / zadania
-- `PATCH /tasks/edge-banding/edge` – **hurtowe oznaczenie partii jako oklejone (`EDGED`)**: dla `EDGE_BANDER_OPERATOR` lub `ADMIN` (przyjmuje `orderId` lub `taskIds`)
-- `POST /edge-tapes/:id/consume` – **ręczne odliczenie okleiny przez operatora okleiniarki (`EDGE_BANDER_OPERATOR` / `ADMIN`)**: pozwala odliczyć zadaną liczbę metrów bieżących (np. odpad przy ustawianiu maszyny)
-- `POST /orders/:id/deduct-edge-tape` – **ręczne odliczenie okleiny dla zlecenia przez operatora okleiniarki (`EDGE_BANDER_OPERATOR` / `ADMIN`)**: zdejmuje wyliczone metry ze stanu magazynowego i oznacza zlecenie
-- Automatyczne odejmowanie okleiny z magazynu następuje również samoczynnie po skończeniu serii mebli (status zlecenia `PACKED` lub `COMPLETED`)
+## 🧩 Główne moduły i możliwości
 
-#### 3. Wiertarka CNC (DRILLING)
-- `GET /tasks/drilling-list?orderId=:id&readyOnly=true` – **lista zadań wiertarskich**: formatki z informacją o schemacie nawierceń, wymiarach i fladze gotowości technologicznej `isReadyToDrill`
-- `GET /orders/:id/drilling-list?readyOnly=true` – lista nawierceń dla wskazanego zlecenia
-- `GET /tasks/drilling-summary?orderId=:id` oraz `GET /orders/:id/drilling-summary` – **podsumowanie wiertarskie**: statystyka partii i sztuk gotowych do wiercenia, już nawierconych oraz flaga `isFullyDrilled`
-- `PATCH /tasks/drilling-list/drill` – **hurtowe oznaczenie partii jako nawiercone (`DRILLED`)**: dla `DRILL_OPERATOR` lub `ADMIN` (przyjmuje `orderId` lub `taskIds`, pilnuje by formatki były uprzednio wycięte i oklejone)
+### 1. Kartoteka mebli i technologia (BOM – Bill of Materials)
+- Ewidencja modeli mebli (`Product`) oraz ich części składowych (`PartDefinition`).
+- Parametry technologiczne formatki: długość, szerokość, grubość, powiązany materiał płyty.
+- Szczegółowe zdefiniowanie oklejania krawędzi: które z 4 krawędzi mają być oklejone (D1, D2, S1, S2), typ taśmy (ABS, PCV, Melamina), kolor i grubość obrzeża.
+- Informacja o schemacie nawierceń wiertarki CNC (np. konfirmaty, kołki, mimośrody).
 
-#### 4. Pakownia (PACKING)
-- `GET /tasks/packing-list?orderId=:id&readyOnly=true` – **lista partii do spakowania**: formatki z flagą gotowości do pakowania `isReadyToPack` (gotowe po etapie `DRILLED`)
-- `GET /orders/:id/packing-list?readyOnly=true` – lista partii do spakowania dla konkretnego zlecenia
-- `GET /tasks/packing-summary?orderId=:id` oraz `GET /orders/:id/packing-summary` – **podsumowanie pakowania**: postęp procentowy (`completionPercentage`), liczba formatek spakowanych oraz flaga `isFullyPacked`
-- `PATCH /tasks/packing-list/pack` – **hurtowe oznaczenie partii jako spakowane (`COMPLETED`)**: dla `PACKER` lub `ADMIN` (przyjmuje `orderId` lub `taskIds`)
-- `PATCH /orders/:id/status` – zmiana statusu całego zlecenia na `PACKED` przez `PACKER` (gdy wszystkie części są `DRILLED`)
+### 2. Magazyn płyt laminowanych (`Material`)
+- Ewidencja płyt w pełnych arkuszach (np. 2800 x 2070 x 18 mm) z automatycznym przeliczaniem na metry kwadratowe ($m^2$).
+- Możliwość rejestracji zużycia całych arkuszy przez operatora piły (`POST /materials/:id/consume` lub w powiązaniu ze zleceniem `POST /orders/:id/consume-sheets`).
 
-#### Operacje ogólne i kod kreskowy
-- `PATCH /tasks/batch-status` – uniwersalna hurtowa zmiana statusu partii (`CUT`, `EDGED`, `DRILLED`, `COMPLETED`) z weryfikacją uprawnień zalogowanej roli
-- `GET /tasks/barcode/:barcode` – szybkie odszukanie zadania po kodzie kreskowym na wózku/palecie
-- `PATCH /tasks/:id/status` – aktualizacja statusu pojedynczej formatki przez uprawnionego pracownika (`CUT`, `EDGED`, `DRILLED`, `COMPLETED`)
-- `GET /api` – interaktywna dokumentacja Swagger UI z autoryzacją Bearer JWT
+### 3. Magazyn obrzeży meblowych (`EdgeTape`)
+- Ewidencja rolek okleiny z dokładnością do typu (np. ABS, Melamina), dekoru/koloru, grubości (np. 0.8 mm, 1.0 mm, 2.0 mm) oraz szerokości taśmy.
+- Stany magazynowe prowadzone w **metrach bieżących (mb)**.
+- **Automatyczna analiza dostępności**: algorytm przelicza obwód oklejanych krawędzi wszystkich elementów w zleceniu i sprawdza, czy stan magazynowy jest wystarczający lub ile metrów brakuje.
+- **Ręczne i automatyczne zdejmowanie ze stanu**:
+  - Ręczne odliczenie przez operatora okleiniarki (np. odpad przy rozruchu maszyny lub dla całego zlecenia).
+  - Automatyczne zdjęcie odpowiedniej ilości metrów po spakowaniu serii mebli (`PACKED` / `COMPLETED`).
 
+### 4. Zlecenia produkcyjne i partie (`ProductionOrder` & `ProductionTask`)
+- Złożenie zamówienia na określoną liczbę mebli w danym kolorze automatycznie generuje zlecenia na formatki dla hali produkcyjnej.
+- Przeliczenie ilości: np. zamówienie na 50 szafek $\times$ 2 boki = partia 100 formatek.
+- Unikalny kod kreskowy na partię/wózek ułatwiający skanowanie czytnikiem na hali.
 
-## Project setup
+---
 
-```bash
-$ npm install
+## ⚙️ Przepływ technologiczny (Workstation Parity)
+
+System wspiera cztery gniazda produkcyjne, z których każde posiada dedykowane widoki robocze oraz operacje wsadowe (batch):
+
+```mermaid
+flowchart LR
+    A["1. PENDING\n(Utworzenie zlecenia)"] --> B["2. CUT\n(Piła panelowa)"]
+    B --> C{"Czy wymaga\noklejenia?"}
+    C -- Tak --> D["3. EDGED\n(Okleiniarka)"]
+    C -- Nie --> E["4. DRILLED\n(Wiertarka CNC)"]
+    D --> E
+    E --> F["5. COMPLETED\n(Pakownia / Spakowane)"]
+    F --> G["Zlecenie PACKED\nAutomatyczny odpis okleiny"]
 ```
 
-## Compile and run the project
+1. **Piła panelowa / Rozkrój (`SAW_OPERATOR`)**:
+   - Korzysta z listy rozkroju (`GET /tasks/cutting-list`), która grupuje formatki o identycznych wymiarach i materiale.
+   - Może jednym żądaniem oznaczyć całą grupę wymiarową jako `CUT` (`PATCH /tasks/cutting-list/cut`).
+   - Wpisuje liczbę zużytych arkuszy płyty.
+2. **Okleiniarka (`EDGE_BANDER_OPERATOR`)**:
+   - Pobiera listę zapotrzebowania na oklejanie (`GET /tasks/edge-banding`), gdzie widzi metry bieżące na sztukę i łącznie na partię.
+   - Oznacza pojedyncze zadanie lub całą partię jako `EDGED` (`PATCH /tasks/edge-banding/edge`). Wymaga uprzedniego wycięcia formatki (`CUT`).
+3. **Centrum wiertarskie CNC (`DRILL_OPERATOR`)**:
+   - Pobiera listę wiertarską (`GET /tasks/drilling-list?readyOnly=true`), która filtruje wyłącznie elementy gotowe technologicznie do nawiercenia.
+   - Formatki wymagające obrzeża muszą mieć status `EDGED`; formatki surowe mogą przejść do wiercenia bezpośrednio po `CUT`.
+   - Oznacza partię jako `DRILLED` (`PATCH /tasks/drilling-list/drill`).
+4. **Pakownia (`PACKER`)**:
+   - Widzi elementy gotowe do spakowania (`GET /tasks/packing-list`), czyli takie, które pomyślnie przeszły etap wiercenia (`DRILLED`).
+   - Monitoruje wskaźnik kompletacji zlecenia (`GET /tasks/packing-summary`).
+   - Oznacza partie jako spakowane (`PATCH /tasks/packing-list/pack`).
+   - Gdy wszystkie elementy zostaną spakowane, całe zlecenie uzyskuje status `PACKED`/`COMPLETED`, co wyzwala automatyczne rozliczenie surowców.
 
+---
+
+## 🔐 Role pracowników i model uprawnień (RBAC)
+
+Każde stanowisko na hali produkcyjnej posiada własne konto zabezpieczone tokenem JWT. System rygorystycznie pilnuje reguł bezpieczeństwa:
+
+| Rola w systemie | Stanowisko / Maszyna | Dozwolone akcje na statusach | Dodatkowe uprawnienia |
+| :--- | :--- | :--- | :--- |
+| `SAW_OPERATOR` | Piła panelowa / Formatówka | `CUT` | Rozkrój grupowy, wpisywanie zużycia arkuszy płyty |
+| `EDGE_BANDER_OPERATOR` | Okleiniarka wąskich płaszczyzn | `EDGED` | Masowe oklejanie partii, ręczne odpisywanie metrów okleiny |
+| `DRILL_OPERATOR` | Centrum wiertarskie CNC | `DRILLED` | Masowe wiercenie partii gotowych technologicznie |
+| `PACKER` | Pakownia i kontrola jakości | `COMPLETED` | Masowe pakowanie partii, oznaczanie zlecenia jako `PACKED` |
+| `ADMIN` | Kierownik produkcji / Szef | Pełne uprawnienia do wszystkich statusów | Pełne CRUD: produkty, materiały, okleiny, zlecenia, użytkownicy |
+
+---
+
+## 🛠 Architektura i technologie
+
+- **Framework**: [NestJS 12](https://nestjs.com/) (Node.js w trybie ESM)
+- **Język**: TypeScript 6
+- **Baza danych**: PostgreSQL (wersja $\ge$ 15, w kontenerze Docker)
+- **ORM**: [Prisma ORM 6](https://www.prisma.io/)
+- **Uwierzytelnianie**: Passport JWT, bcryptjs
+- **Walidacja danych**: `class-validator`, `class-transformer`
+- **Dokumentacja API**: Swagger UI / OpenAPI 3.0
+- **Testy**: [Vitest 4](https://vitest.dev/), Supertest (testy jednostkowe oraz integracyjne E2E)
+- **Linter**: [oxlint](https://oxc.rs/)
+
+---
+
+## 🚀 Instalacja i pierwsze uruchomienie (Jak używać)
+
+### Wymagania wstępne
+- Zainstalowany **Node.js** (wersja LTS $\ge$ 20.x) oraz menedżer pakietów **npm**.
+- Zainstalowany **Docker** oraz **Docker Compose** (do uruchomienia bazy PostgreSQL).
+
+### Krok 1: Klonowanie repozytorium i instalacja zależności
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+git clone https://github.com/sdmati/carpenterERP.git
+cd carpenterERP
+npm install
 ```
 
-## Run tests
-
+### Krok 2: Konfiguracja zmiennych środowiskowych
+Skopiuj plik `.env.example` do `.env`:
 ```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+cp .env.example .env
+```
+Domyślna zawartość pliku `.env` dostosowana do dockera:
+```env
+DATABASE_URL="postgresql://uzytkownik:haslo@localhost:5432/stolarz_erp?schema=public"
 ```
 
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
-
+### Krok 3: Uruchomienie bazy danych PostgreSQL
+W katalogu projektu uruchom kontener z bazą danych:
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+docker compose up -d
+```
+Kontener `stolarz-erp-db` zostanie uruchomiony na porcie `5432`.
+
+### Krok 4: Migracje bazy danych i wgranie danych demonstracyjnych (Seed)
+Wykonaj migracje Prisma oraz uruchom skrypt seedujący:
+```bash
+npx prisma migrate dev
+npm run seed
+```
+Skrypt seedujący utworzy:
+- domyślne konta pracowników dla każdej roli,
+- park maszynowy (piła, okleiniarka, wiertarka),
+- stany magazynowe płyt meblowych (Dąb Sonoma, Biała) i obrzeży (ABS, Melamina),
+- mebel demonstracyjny (*Szafka dolna kuchenna 60*) wraz ze strukturą formatek i oklejaniem,
+- przykładowe zlecenie produkcyjne na 5 szafek (partie z kodami kreskowymi).
+
+### Krok 5: Uruchomienie aplikacji
+```bash
+# Tryb deweloperski (z hot-reload)
+npm run start:dev
+
+# Tryb produkcyjny
+npm run build
+npm run start:prod
+```
+Serwer uruchomi się domyślnie pod adresem: `http://localhost:3000`.
+
+### Krok 6: Interaktywna dokumentacja Swagger UI
+Otwórz przeglądarkę pod adresem:
+👉 **[http://localhost:3000/api](http://localhost:3000/api)**
+
+W Swagger UI możesz:
+- Zalogować się endpointem `POST /auth/login` i skopiować token JWT.
+- Kliknąć przycisk **Authorize** (w prawym górnym rogu) i wkleić token w formacie: `Bearer <TWÓJ_TOKEN>`.
+- Testować dowolne endpointy bezpośrednio w przeglądarce.
+
+---
+
+## 👥 Domyślne konta testowe
+
+Po wykonaniu `npm run seed` w systemie dostępne są następujące konta:
+
+| Login | Hasło | Rola | Zastosowanie |
+| :--- | :--- | :--- | :--- |
+| `admin` | `admin123` | `ADMIN` | Zarządzanie produkcją, zamówienia, pełne uprawnienia |
+| `saw_operator` | `saw123` | `SAW_OPERATOR` | Rozkrój płyt, wpisywanie zużycia arkuszy (`CUT`) |
+| `edge_operator` | `edge123` | `EDGE_BANDER_OPERATOR` | Okleinowanie krawędzi, zużycie okleiny (`EDGED`) |
+| `drill_operator` | `drill123` | `DRILL_OPERATOR` | Nawiercanie formatek CNC (`DRILLED`) |
+| `packer` | `packer123` | `PACKER` | Pakowanie paczek, zamykanie zleceń (`COMPLETED`) |
+
+---
+
+## 📋 Przykładowy cykl produkcyjny krok po kroku (Tutorial)
+
+Poniżej przedstawiono przykładowy, kompletny scenariusz realizacji zlecenia na hali:
+
+### 1. Logowanie pracowników
+Każdy pracownik loguje się swoim loginem, aby uzyskać token JWT:
+```bash
+curl -X POST http://localhost:3000/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username": "saw_operator", "password": "saw123"}'
+```
+W odpowiedzi serwer zwraca `{ "accessToken": "eyJhbGciOi..." }`. Używaj tego tokenu w nagłówku:
+`Authorization: Bearer <accessToken>`.
+
+### 2. Sprawdzenie dostępności okleiny przed cięciem
+Kierownik lub operator sprawdza, czy w magazynie wystarczy okleiny na zlecenie #1:
+```bash
+curl -X GET http://localhost:3000/orders/1/edge-tape-check
+```
+Odpowiedź zwraca `isStockSufficient: true/false` oraz zestawienie metrów potrzebnych vs dostępnych.
+
+### 3. Stanowisko 1: Rozkrój płyt (Pilarz)
+Pilarz pobiera listę formatek pogrupowaną wg wymiarów dla zlecenia:
+```bash
+curl -X GET "http://localhost:3000/tasks/cutting-list?orderId=1"
+```
+Następnie pilarz wycina grupę formatek o wymiarach 720 x 510 mm i oznacza je jako `CUT`:
+```bash
+curl -X PATCH http://localhost:3000/tasks/cutting-list/cut \
+  -H "Authorization: Bearer <TOKEN_PILARZA>" \
+  -H "Content-Type: application/json" \
+  -d '{"orderId": 1, "length": 720, "width": 510, "sheetsUsed": 2}'
+```
+System zaktualizował status pasujących formatek na `CUT` i odliczył 2 arkusze z magazynu płyt.
+
+### 4. Stanowisko 2: Okleiniarka (Operator okleiniarki)
+Operator pobiera listę partii do oklejenia:
+```bash
+curl -X GET "http://localhost:3000/tasks/edge-banding?orderId=1"
+```
+Gdy oklei elementy, oznacza hurtowo całe zlecenie (lub listę partii) jako `EDGED`:
+```bash
+curl -X PATCH http://localhost:3000/tasks/edge-banding/edge \
+  -H "Authorization: Bearer <TOKEN_OKLEINIARZA>" \
+  -H "Content-Type: application/json" \
+  -d '{"orderId": 1}'
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+### 5. Stanowisko 3: Wiertarka CNC (Wiertacz)
+Operator wiertarki pobiera listę zadań gotowych do nawiercenia:
+```bash
+curl -X GET "http://localhost:3000/tasks/drilling-list?orderId=1&readyOnly=true"
+```
+Po wykonaniu nawierceń oznacza partię hurtowo jako `DRILLED`:
+```bash
+curl -X PATCH http://localhost:3000/tasks/drilling-list/drill \
+  -H "Authorization: Bearer <TOKEN_WIERTACZA>" \
+  -H "Content-Type: application/json" \
+  -d '{"orderId": 1}'
+```
 
-## Observability
+### 6. Stanowisko 4: Pakownia (Pakowacz)
+Pakowacz sprawdza stan skompletowania paczek:
+```bash
+curl -X GET "http://localhost:3000/tasks/packing-summary?orderId=1"
+```
+Gdy elementy zostaną spakowane do kartonów, oznacza je jako `COMPLETED`:
+```bash
+curl -X PATCH http://localhost:3000/tasks/packing-list/pack \
+  -H "Authorization: Bearer <TOKEN_PAKOWACZA>" \
+  -H "Content-Type: application/json" \
+  -d '{"orderId": 1}'
+```
+> [!NOTE]
+> Gdy wszystkie partie w zleceniu osiągną status `COMPLETED`, całe zlecenie automatycznie przechodzi w status `COMPLETED`, a system samoczynnie zdejmuje wyliczone metry bieżące obrzeży ze stanu magazynowego!
 
-In production applications, observability is essential for understanding how your system behaves, detecting issues early, and maintaining reliable performance.
+---
 
-[NestJS Observe](https://observe.nestjs.com) automatically instruments your NestJS application, giving you deep visibility into your system with minimal setup:
+## 📡 Pełna lista endpointów API
 
-- **Distributed tracing:** Follow requests across services and understand how they flow through your system.
-- **Waterfall analysis:** Visualize request execution and identify slow operations, bottlenecks, and unexpected delays.
-- **Performance analysis:** Analyze application performance in real time and quickly pinpoint areas that need optimization.
-- **Metrics:** Track key application and infrastructure metrics to understand system health and performance trends.
-- **Logging:** Centralize and correlate logs with traces and other telemetry to make debugging easier.
-- **Error tracking:** Detect errors quickly and investigate their root causes with the surrounding context.
-- **SLA monitoring:** Track service-level objectives and identify when your application is approaching or exceeding defined thresholds.
-- **Alarms and alerts:** Set up alerts for critical errors, performance degradation, SLA violations, and other anomalies so your team can react quickly.
+### Autoryzacja (`/auth`)
+- `POST /auth/login` – Logowanie i zwrot tokenu JWT Bearer.
+- `GET /auth/me` – Zwraca dane aktualnie zalogowanego pracownika.
 
-## Resources
+### Magazyn materiałów płytowych (`/materials`)
+- `GET /materials` – Lista płyt na stanie (długość, szerokość, grubość, kolor, arkusze, $m^2$).
+- `POST /materials` – Dodanie nowej płyty do magazynu (`ADMIN`).
+- `GET /materials/:id` – Szczegóły materiału.
+- `POST /materials/:id/consume` – Ręczne wpisanie zużycia arkuszy płyty (`SAW_OPERATOR` / `ADMIN`).
 
-Check out a few resources that may come in handy when working with NestJS:
+### Magazyn okleiny i obrzeży (`/edge-tapes`)
+- `GET /edge-tapes` – Lista taśm okleinowych i ich stan magazynowy w mb.
+- `POST /edge-tapes` – Dodanie nowego typu/koloru okleiny (`ADMIN`).
+- `GET /edge-tapes/:id` – Szczegóły danej okleiny.
+- `GET /edge-tapes/check-availability?orderId=:id` – Sprawdzenie dostępności okleiny dla zlecenia.
+- `POST /edge-tapes/:id/consume` – Ręczne odliczenie metrów bieżących okleiny (`EDGE_BANDER_OPERATOR` / `ADMIN`).
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Auto-instrument your application with [NestJS Observer](https://observer.nestjs.com). Distributed tracing, metrics, and logging made easy. Error tracking and performance monitoring for your NestJS applications.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+### Zlecenia produkcyjne (`/orders`)
+- `POST /orders` – Utworzenie nowego zlecenia (automatycznie generuje partie zadań na halę).
+- `GET /orders` – Lista wszystkich zleceń produkcyjnych.
+- `GET /orders/:id` – Szczegóły zlecenia wraz z partiami.
+- `GET /orders/:id/tasks` – Lista elementów zlecenia.
+- `GET /orders/:id/cutting-list` – Lista rozkroju dla wskazanego zlecenia.
+- `GET /orders/:id/edge-banding` – Zestawienie zapotrzebowania na okleinę dla zlecenia.
+- `GET /orders/:id/edge-tape-check` – Analiza dostępności okleiny dla zlecenia.
+- `GET /orders/:id/drilling-list` – Lista formatek do nawiercenia dla zlecenia.
+- `GET /orders/:id/drilling-summary` – Podsumowanie postępu nawierceń w zleceniu.
+- `GET /orders/:id/packing-list` – Lista formatek do spakowania dla zlecenia.
+- `GET /orders/:id/packing-summary` – Podsumowanie pakowania w zleceniu.
+- `POST /orders/:id/consume-sheets` – Wpisanie zużycia arkuszy dla zlecenia (`SAW_OPERATOR` / `ADMIN`).
+- `POST /orders/:id/deduct-edge-tape` – Ręczne odliczenie okleiny dla zlecenia (`EDGE_BANDER_OPERATOR` / `ADMIN`).
+- `PATCH /orders/:id/status` – Zmiana statusu zlecenia (np. `PACKED` przez `PACKER`).
 
-## Support
+### Zadania produkcyjne i stanowiska (`/tasks`)
+- `GET /tasks` – Lista partii (opcjonalny filtr po `orderId` lub `status`).
+- `GET /tasks/:id` – Szczegóły pojedynczej partii.
+- `GET /tasks/barcode/:barcode` – Wyszukanie zadania po kodzie kreskowym na wózku.
+- `PATCH /tasks/:id/status` – Zmiana statusu partii (`CUT`, `EDGED`, `DRILLED`, `COMPLETED`).
+- **Piła panelowa (Rozkrój)**:
+  - `GET /tasks/cutting-list` – Lista rozkroju pogrupowana wymiarami i materiałem.
+  - `PATCH /tasks/cutting-list/cut` – Grupowe oznaczenie wymiaru jako `CUT` (`SAW_OPERATOR` / `ADMIN`).
+- **Okleiniarka**:
+  - `GET /tasks/edge-banding` – Lista partii z parametrami oklejania krawędzi.
+  - `GET /tasks/:id/edge-banding` – Wyliczenie metrów okleiny dla konkretnej partii.
+  - `PATCH /tasks/edge-banding/edge` – Hurtowe oznaczenie partii jako `EDGED` (`EDGE_BANDER_OPERATOR` / `ADMIN`).
+- **Wiertarka CNC**:
+  - `GET /tasks/drilling-list` – Lista partii do nawiercenia z flagą `isReadyToDrill`.
+  - `GET /tasks/drilling-summary` – Statystyka nawierceń dla zlecenia.
+  - `PATCH /tasks/drilling-list/drill` – Hurtowe oznaczenie partii jako `DRILLED` (`DRILL_OPERATOR` / `ADMIN`).
+- **Pakownia**:
+  - `GET /tasks/packing-list` – Lista partii do spakowania z flagą `isReadyToPack`.
+  - `GET /tasks/packing-summary` – Procentowy postęp kompletacji i pakowania zlecenia.
+  - `PATCH /tasks/packing-list/pack` – Hurtowe oznaczenie partii jako `COMPLETED` (`PACKER` / `ADMIN`).
+- **Operacja uniwersalna**:
+  - `PATCH /tasks/batch-status` – Masowa zmiana statusu z weryfikacją uprawnień zalogowanej roli.
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+---
 
-## Stay in touch
+## 🧪 Testy i jakość kodu
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+Projekt objęty jest kompleksowym zestawem testów jednostkowych, integracyjnych i reguł lintera:
 
-## License
+```bash
+# Uruchomienie testów jednostkowych (Vitest)
+npm test
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+# Uruchomienie testów integracyjnych E2E (Supertest + Vitest)
+npm run test:e2e
+
+# Raport pokrycia kodu testami
+npm run test:cov
+
+# Szybka weryfikacja kodu linterem (oxlint)
+npm run lint
+
+# Formatowanie kodu (Prettier)
+npm run format
+```
+
+---
+
+## 📄 Licencja
+
+Projekt objęty jest licencją [MIT](LICENSE).
